@@ -24,7 +24,6 @@ pub const Token = union(enum) {
     rtag,
     equal,
     not_equal,
-    // --
     function,
     let,
     true_op,
@@ -40,10 +39,13 @@ pub const Token = union(enum) {
             .{ "true", .true_op },
             .{ "false", .false_op },
             .{ "if", .if_op },
+            .{ "else", .else_op },
             .{ "return ", .return_op },
         });
         return map.get(identifier);
     }
+
+    const tag = std.meta.Tag(Token);
 };
 
 fn is_letter(char: u8) bool {
@@ -106,13 +108,20 @@ pub const Lexer = struct {
                     break :blk .assign;
                 }
             },
+            '!' => blk: {
+                if (self.peek_char() == '=') {
+                    self.read_char();
+                    break :blk .not_equal;
+                } else {
+                    break :blk .bang;
+                }
+            },
             ';' => .semicolon,
             '(' => .lparen,
             ')' => .rparen,
             ',' => .comma,
             '+' => .plus,
             '-' => .minus,
-            '!' => .bang,
             '*' => .asterisk,
             '/' => .fslash,
             '{' => .lbrace,
@@ -158,7 +167,7 @@ test "lexer" {
     const tokens = [_]Token{
         .let,
         .{ .identifier = "five" },
-        .assign,
+        .equal,
         .if_op,
         .function,
         .lparen,
@@ -172,7 +181,8 @@ test "lexer" {
 
     for (tokens) |tok| {
         const toktok = lexer.next_token();
-        std.debug.print("\ntest {} :: lexer: {}\n", .{ tok, toktok });
+        const toktag = std.meta.activeTag(toktok);
+        std.debug.print("\ntest {} :: lexer: {} :: tag {}\n", .{ tok, toktok, toktag });
         try std.testing.expectEqualDeep(tok, toktok);
     }
 }
