@@ -1,4 +1,8 @@
+//! Defines the lexer file
+//! implements the tokenising and lexer struct
+
 const std = @import("std");
+
 /// Token enum to define all Tokens and keyword identifiers
 /// Note that all are define void expect for ident and int
 /// However this could be change to explicitely define
@@ -48,14 +52,17 @@ pub const Token = union(enum) {
     const tag = std.meta.Tag(Token);
 };
 
+/// returns true is char false if not
 fn is_letter(char: u8) bool {
     return std.ascii.isAlphabetic(char) or char == '_';
 }
 
+/// returns true if digit false if not
 fn is_integer(char: u8) bool {
     return std.ascii.isDigit(char);
 }
 
+/// defines lexer struct and its methods
 pub const Lexer = struct {
     input: []const u8,
     curr_position: u8 = 0,
