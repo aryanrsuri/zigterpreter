@@ -206,7 +206,7 @@ test "lexer" {
 
     for (tokens) |tok| {
         const toktok = lexer.next_token();
-        std.debug.print("\nexp: {} [\ngot: {}\n", .{ tok, toktok });
+        std.debug.print("\nexp: {} \ngot: {}\n", .{ tok, toktok });
         std.testing.expectEqualDeep(tok, toktok) catch {
             return error.TokenMismatch;
         };
