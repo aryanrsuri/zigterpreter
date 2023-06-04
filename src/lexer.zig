@@ -122,7 +122,7 @@ pub const Lexer = struct {
             '=' => {
                 if (self.peek_char() == '=') {
                     token.kind = .equal;
-                    token.literal = self.input[self.curr_position..self.next_position];
+                    token.literal = self.input[self.curr_position .. self.next_position + 1];
                     self.read_char();
                 } else {
                     token.kind = .assign;
@@ -131,7 +131,7 @@ pub const Lexer = struct {
             '!' => {
                 if (self.peek_char() == '=') {
                     token.kind = .not_equal;
-                    token.literal = self.input[self.curr_position..self.next_position];
+                    token.literal = self.input[self.curr_position .. self.next_position + 1];
                     self.read_char();
                 } else {
                     token.kind = .bang;
@@ -194,18 +194,19 @@ pub const Lexer = struct {
 };
 
 test "lexer" {
-    const test_string = "let f = 3;";
+    const test_string = "let f != 3;";
     var lexer = Lexer.init(test_string);
     const tokens = [_]Token{
         Token.init(.let, "let"),
         Token.init(.identifier, "f"),
-        Token.init(.assign, "="),
+        Token.init(.not_equal, "!="),
         Token.init(.integer, "3"),
         Token.init(.semicolon, ";"),
     };
 
     for (tokens) |tok| {
         const toktok = lexer.next_token();
+        std.debug.print("\nexp: {} [\ngot: {}\n", .{ tok, toktok });
         std.testing.expectEqualDeep(tok, toktok) catch {
             return error.TokenMismatch;
         };
