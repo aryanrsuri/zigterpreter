@@ -11,11 +11,17 @@ pub const Node = union(enum) {
 pub const Identifier = struct {
     const Self = @This();
     token: Token,
+    value: []const u8,
 
     pub fn init(token: Token) Self {
         return .{
             .token = token,
+            .value = token.literal,
         };
+    }
+
+    pub fn token_literal(self: *Self) []const u8 {
+        return self.token.literal;
     }
 };
 
@@ -28,7 +34,6 @@ pub const Statement = union(enum) {
 
     pub const let_statement = struct {
         const Self = @This();
-        // token serves also as a name
         token: Token,
         ident: Token,
         value: ?Expression,
@@ -53,17 +58,12 @@ pub const Program = struct {
     }
 
     pub fn deinit(self: *Self) void {
-        // for (self.statements.items) |*state| {
-        //     switch (state.*) {
-        //         inline else => |*es| es.deinit(),
-        //     }
-        // }
-        //
         self.statements.deinit();
     }
+
     pub fn token_literal(self: *Self) []const u8 {
         if (self.statements.items.len > 0) {
-            return self.statements[0].token;
+            return self.statements[0].token.literal;
         } else {
             return "";
         }

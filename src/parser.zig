@@ -37,7 +37,7 @@ const Parser = struct {
 
     pub fn parse_program(self: *Self) !Program {
         var program: Program = Program.init(self.allocator);
-        while (self.curr_token != .eof) {
+        while (self.curr_token.kind != .eof) {
             var stmt = self.parse_statement();
             if (stmt) |s| {
                 try program.statements.append(s);
@@ -49,7 +49,7 @@ const Parser = struct {
     }
 
     fn parse_statement(self: *Self) ?Statement {
-        return switch (self.curr_token) {
+        return switch (self.curr_token.kind) {
             .let => self.parse_let_statement(),
             else => null,
         };
@@ -61,13 +61,15 @@ const Parser = struct {
     fn parse_let_statement(self: *Self) ?Statement {
         var letstate: Statement.let_statement = Statement.let_statement{
             .token = self.curr_token,
+            .ident = Token{},
             .value = null,
         };
 
-        if (!self.expect_peek(Token{ .identifier = "" })) {
+        if (!self.expect_peek(.identifier)) {
             return null;
         }
 
+        letstate.ident = self.curr_token;
         if (!self.expect_peek(.assign)) {
             return null;
         }
@@ -76,8 +78,8 @@ const Parser = struct {
         return Statement{ .let_statement = letstate };
     }
 
-    fn expect_peek(self: *Self, tok: Token) bool {
-        if (std.meta.activeTag(self.peek_token) == std.meta.activeTag(tok)) {
+    fn expect_peek(self: *Self, tok: l.token_types) bool {
+        if (self.peek_token.kind == tok) {
             self.next_token();
             return true;
         } else {
@@ -88,7 +90,7 @@ const Parser = struct {
 
 test "let statements" {
     const input =
-        \\let x = 5;
+        \\let  e=;
         \\let y = 10;
         \\let foobar = bar + 10;
         \\let foobar = add(x, y) + 10;
@@ -103,31 +105,28 @@ test "let statements" {
     try std.testing.expect(prog.statements.items.len == 4);
 
     const expected_idents = [_]ast.Identifier{
-        Identifier.init(Token{ .identifier = "x" }),
-        Identifier.init(Token{ .identifier = "y" }),
-        Identifier.init(Token{ .identifier = "foobar" }),
-        Identifier.init(Token{ .identifier = "foobar" }),
+        Identifier.init(Token.init(.identifier, "e")),
+        Identifier.init(Token.init(.identifier, "y")),
+        Identifier.init(Token.init(.identifier, "foobar")),
+        Identifier.init(Token.init(.identifier, "foobar")),
     };
 
     for (expected_idents, 0..) |ident, i| {
         const statement = prog.statements.items[i];
         var ls = statement.let_statement;
-        // const literal = ls.token;
+        const literal = ls.ident.literal;
 
-        // _ = ident;
-        // _ = i;
-        // std.debug.print("{}", .{lex.next_token()});
-        std.debug.print("\n\nIDENT : {}\n", .{ident});
+        // std.debug.print("\n\nIDENT : {}\n", .{ident});
         // std.debug.print("STATEMENT {}\n", .{statement});
-        std.debug.print("LET STATE: {}\n", .{ls});
+        // std.debug.print("LET STATE: {}\n", .{ls});
 
-        try std.testing.expect(ls.token == .let);
+        try std.testing.expect(ls.token.kind == .let);
 
         // Compare token literal
-        // std.testing.expect(std.mem.eql(u8, ident, literal)) catch {
-        // std.debug.print("Expected: {s}, got: {s}\n", .{ ident.value, literal });
-        // return TestError.CompareFailed;
-        // };
+        std.testing.expect(std.mem.eql(u8, ident.value, literal)) catch {
+            std.debug.print("Expected: {s}, got: {s}\n", .{ ident.value, literal });
+            return error.ValueMismatch;
+        };
     }
     // }
 }

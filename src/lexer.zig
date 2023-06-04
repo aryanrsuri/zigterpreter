@@ -3,10 +3,7 @@
 
 const std = @import("std");
 
-/// Token enum to define all Tokens and keyword identifiers
-/// Note that all are define void expect for ident and int
-/// However this could be change to explicitely define
-/// The byte value of each token
+// seperating token types from token to make chapter 2 ++ easier
 pub const token_types = enum {
     identifier,
     integer,
@@ -37,6 +34,11 @@ pub const token_types = enum {
     return_op,
 };
 
+/// Token struct
+/// field: kind
+/// field: literal
+/// method: init
+/// method: keyword
 pub const Token = struct {
     kind: token_types = .illegal,
     literal: []const u8 = "",
@@ -204,7 +206,8 @@ test "lexer" {
 
     for (tokens) |tok| {
         const toktok = lexer.next_token();
-        std.debug.print("\ntest {} ||| lexer: {} \n", .{ tok, toktok });
-        try std.testing.expectEqualDeep(tok, toktok);
+        std.testing.expectEqualDeep(tok, toktok) catch {
+            return error.TokenMismatch;
+        };
     }
 }
