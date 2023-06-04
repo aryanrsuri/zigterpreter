@@ -44,12 +44,12 @@ pub const Token = union(enum) {
             .{ "false", .false_op },
             .{ "if", .if_op },
             .{ "else", .else_op },
-            .{ "return ", .return_op },
+            .{ "return", .return_op },
         });
         return map.get(identifier);
     }
 
-    const tag = std.meta.Tag(Token);
+    pub const tag = std.meta.Tag(Token);
 };
 
 /// returns true is char false if not
@@ -169,12 +169,12 @@ pub const Lexer = struct {
 };
 
 test "lexer" {
-    const test_string = "let five == if fn(x / *y);";
+    const test_string = "let five != if fn(x / *y);";
     var lexer = Lexer.init(test_string);
     const tokens = [_]Token{
         .let,
         .{ .identifier = "five" },
-        .equal,
+        .not_equal,
         .if_op,
         .function,
         .lparen,
