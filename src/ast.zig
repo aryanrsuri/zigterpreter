@@ -20,16 +20,17 @@ pub const Identifier = struct {
 };
 
 pub const Expression = union(enum) {
-    // const Self = @This();
     indentifier: Identifier,
 };
+
 pub const Statement = union(enum) {
-    let_statement,
+    let_statement: let_statement,
 
     pub const let_statement = struct {
         const Self = @This();
         // token serves also as a name
         token: Token,
+        ident: Token,
         value: ?Expression,
 
         pub fn print(self: *Self) !void {
@@ -51,6 +52,15 @@ pub const Program = struct {
         };
     }
 
+    pub fn deinit(self: *Self) void {
+        // for (self.statements.items) |*state| {
+        //     switch (state.*) {
+        //         inline else => |*es| es.deinit(),
+        //     }
+        // }
+        //
+        self.statements.deinit();
+    }
     pub fn token_literal(self: *Self) []const u8 {
         if (self.statements.items.len > 0) {
             return self.statements[0].token;

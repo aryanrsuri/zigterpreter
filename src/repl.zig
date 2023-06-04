@@ -9,7 +9,7 @@ pub fn init(allocator: std.mem.Allocator) !void {
     var l = lexer.Lexer.init(input);
     var t: lexer.Token = l.next_token();
     while (true) : (t = l.next_token()) {
-        if (t == .eof) break;
+        if (t.kind == .eof) break;
         std.debug.print("token: {}\n", .{t});
     }
 }

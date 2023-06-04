@@ -7,9 +7,9 @@ const std = @import("std");
 /// Note that all are define void expect for ident and int
 /// However this could be change to explicitely define
 /// The byte value of each token
-pub const Token = union(enum) {
-    identifier: []const u8,
-    integer: []const u8,
+pub const token_types = enum {
+    identifier,
+    integer,
     illegal,
     eof,
     assign,
@@ -35,9 +35,20 @@ pub const Token = union(enum) {
     if_op,
     else_op,
     return_op,
+};
 
-    fn keyword(identifier: []const u8) ?Token {
-        const map = std.ComptimeStringMap(Token, .{
+pub const Token = struct {
+    kind: token_types = .illegal,
+    literal: []const u8 = "",
+    pub fn init(kind: token_types, literal: []const u8) Token {
+        return Token{
+            .kind = kind,
+            .literal = literal,
+        };
+    }
+
+    pub fn keyword(identifier: []const u8) ?token_types {
+        const map = std.ComptimeStringMap(token_types, .{
             .{ "let", .let },
             .{ "fn", .function },
             .{ "true", .true_op },
@@ -48,8 +59,6 @@ pub const Token = union(enum) {
         });
         return map.get(identifier);
     }
-
-    pub const tag = std.meta.Tag(Token);
 };
 
 /// returns true is char false if not
@@ -61,7 +70,6 @@ fn is_letter(char: u8) bool {
 fn is_integer(char: u8) bool {
     return std.ascii.isDigit(char);
 }
-
 /// defines lexer struct and its methods
 pub const Lexer = struct {
     input: []const u8,
@@ -106,49 +114,56 @@ pub const Lexer = struct {
     }
     pub fn next_token(self: *@This()) Token {
         self.skip_whitespace();
-        const token: Token = switch (self.curr_char) {
-            '=' => blk: {
+        const sch: []const u8 = self.curr_string();
+        var token = Token.init(.illegal, sch);
+        switch (self.curr_char) {
+            '=' => {
                 if (self.peek_char() == '=') {
+                    token.kind = .equal;
+                    token.literal = self.input[self.curr_position..self.next_position];
                     self.read_char();
-                    break :blk .equal;
                 } else {
-                    break :blk .assign;
+                    token.kind = .assign;
                 }
             },
-            '!' => blk: {
+            '!' => {
                 if (self.peek_char() == '=') {
+                    token.kind = .not_equal;
+                    token.literal = self.input[self.curr_position..self.next_position];
                     self.read_char();
-                    break :blk .not_equal;
                 } else {
-                    break :blk .bang;
+                    token.kind = .bang;
                 }
             },
-            ';' => .semicolon,
-            '(' => .lparen,
-            ')' => .rparen,
-            ',' => .comma,
-            '+' => .plus,
-            '-' => .minus,
-            '*' => .asterisk,
-            '/' => .fslash,
-            '{' => .lbrace,
-            '}' => .rbrace,
-            '<' => .ltag,
-            '>' => .rtag,
+            ';' => token.kind = .semicolon,
+            '(' => token.kind = .lparen,
+            ')' => token.kind = .rparen,
+            ',' => token.kind = .comma,
+            '+' => token.kind = .plus,
+            '-' => token.kind = .minus,
+            '*' => token.kind = .asterisk,
+            '/' => token.kind = .fslash,
+            '{' => token.kind = .lbrace,
+            '}' => token.kind = .rbrace,
+            '<' => token.kind = .ltag,
+            '>' => token.kind = .rtag,
             'a'...'z', 'A'...'Z', '_' => {
-                const literal = self.read_identifier();
-                if (Token.keyword(literal)) |token| {
+                token.literal = self.read_identifier();
+                if (Token.keyword(token.literal)) |tok| {
+                    token.kind = tok;
                     return token;
                 }
-                return .{ .identifier = literal };
+                token.kind = .identifier;
+                return token;
             },
             '0'...'9' => {
-                const integer = self.read_integer();
-                return .{ .integer = integer };
+                token.literal = self.read_integer();
+                token.kind = .integer;
+                return token;
             },
-            0 => .eof,
-            else => .illegal,
-        };
+            0 => token.kind = .eof,
+            else => token.kind = .illegal,
+        }
         self.read_char();
         return token;
     }
@@ -161,6 +176,14 @@ pub const Lexer = struct {
         }
     }
 
+    fn curr_string(self: *@This()) []const u8 {
+        if (self.curr_position >= self.input.len) {
+            return "0";
+        } else {
+            return self.input[self.curr_position..self.next_position];
+        }
+    }
+
     pub fn skip_whitespace(self: *@This()) void {
         while (std.ascii.isWhitespace(self.curr_char)) {
             self.read_char();
@@ -169,27 +192,19 @@ pub const Lexer = struct {
 };
 
 test "lexer" {
-    const test_string = "let five != if fn(x / *y);";
+    const test_string = "let f = 3;";
     var lexer = Lexer.init(test_string);
     const tokens = [_]Token{
-        .let,
-        .{ .identifier = "five" },
-        .not_equal,
-        .if_op,
-        .function,
-        .lparen,
-        .{ .identifier = "x" },
-        .fslash,
-        .asterisk,
-        .{ .identifier = "y" },
-        .rparen,
-        .semicolon,
+        Token.init(.let, "let"),
+        Token.init(.identifier, "f"),
+        Token.init(.assign, "="),
+        Token.init(.integer, "3"),
+        Token.init(.semicolon, ";"),
     };
 
     for (tokens) |tok| {
         const toktok = lexer.next_token();
-        const toktag = std.meta.activeTag(toktok);
-        std.debug.print("\ntest {} :: lexer: {} :: tag {}\n", .{ tok, toktok, toktag });
+        std.debug.print("\ntest {} ||| lexer: {} \n", .{ tok, toktok });
         try std.testing.expectEqualDeep(tok, toktok);
     }
 }
