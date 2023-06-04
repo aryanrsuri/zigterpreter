@@ -14,13 +14,13 @@ const Parser = struct {
     lexer: *Lexer,
     curr_token: Token = undefined,
     peek_token: Token = undefined,
-    parse_err: std.ArrayList([]const u8),
+    errors: std.ArrayList([]const u8),
 
     pub fn init(allocator: std.mem.Allocator, lexer: *Lexer) Self {
         var parser = Self{
             .lexer = lexer,
             .allocator = allocator,
-            .parse_err = std.ArrayList([]const u8).init(allocator),
+            .errors = std.ArrayList([]const u8).init(allocator),
         };
 
         parser.next_token();
@@ -28,7 +28,13 @@ const Parser = struct {
         return parser;
     }
 
-    // pub fn deinit()
+    pub fn deinit(self: *Self) void {
+        self.errors.deinit();
+    }
+
+    pub fn errors(self: *Self) std.ArrayList([]const u8) {
+        return self.errors.items;
+    }
 
     pub fn next_token(self: *Self) void {
         self.curr_token = self.peek_token;
@@ -51,11 +57,10 @@ const Parser = struct {
     fn parse_statement(self: *Self) ?Statement {
         return switch (self.curr_token.kind) {
             .let => self.parse_let_statement(),
+            .return_op => self.parse_return_statement(),
             else => null,
         };
     }
-
-    // statement parsing
 
     /// parse let : self -> let_statement
     fn parse_let_statement(self: *Self) ?Statement {
@@ -74,34 +79,58 @@ const Parser = struct {
             return null;
         }
 
-        // letstate.ident = self.lexer.read_identifier();
         return Statement{ .let_statement = letstate };
     }
 
-    fn expect_peek(self: *Self, tok: l.token_types) bool {
-        if (self.peek_token.kind == tok) {
+    fn parse_return_statement(self: *Self) ?Statement {
+        var retstate: Statement.return_statement = Statement.return_statement{
+            .token = self.curr_token,
+            .value = null,
+        };
+
+        self.next_token();
+        if (!self.expect_peek(.semicolon)) {
+            self.next_token();
+        }
+
+        return Statement{ .return_statement = retstate };
+    }
+
+    fn expect_peek(self: *Self, t: l.token_types) bool {
+        if (self.peek_token.kind == t) {
             self.next_token();
             return true;
         } else {
+            self.next_error(t);
             return false;
         }
+    }
+
+    fn next_error(self: *Self, t: l.token_types) void {
+        const fmt = "EXPECTED TOKEN {any}  || PARSED TOKEN {any}\n";
+        const msg = std.fmt.allocPrint(self.allocator, fmt, .{ t, self.peek_token.kind }) catch {
+            @panic("allocation of string mem did not succeed");
+        };
+        self.errors.append(msg) catch {
+            @panic("allocation of error list did not succeed");
+        };
     }
 };
 
 test "let statements" {
     const input =
-        \\let  e=;
+        \\let e = 4;
         \\let y = 10;
-        \\let foobar = bar + 10;
+        \\let foobar = 3 + 10;
         \\let foobar = add(x, y) + 10;
     ;
 
     var lex = Lexer.init(input);
     var parser = Parser.init(std.testing.allocator, &lex);
     var prog: Program = try parser.parse_program();
+    std.debug.print("{s}\n", .{parser.errors.items});
     defer prog.deinit();
-    // defer parser.deinit();
-    // try checkParseErrors(parser);
+    defer parser.deinit();
     try std.testing.expect(prog.statements.items.len == 4);
 
     const expected_idents = [_]ast.Identifier{
@@ -128,5 +157,25 @@ test "let statements" {
             return error.ValueMismatch;
         };
     }
-    // }
+}
+
+test "return statement" {
+    const input =
+        \\ return 5;
+        \\ return 10;
+        \\ return x;
+    ;
+
+    var lex = Lexer.init(input);
+    var parser = Parser.init(std.testing.allocator, &lex);
+    var prog = try parser.parse_program();
+    std.debug.print("{s}\n", .{parser.errors.items});
+    defer prog.deinit();
+    defer parser.deinit();
+    try std.testing.expect(prog.statements.items.len == 3);
+    for (0..3) |i| {
+        const statement = prog.statements.items[i];
+        var rs = statement.return_statement;
+        try std.testing.expect(rs.token.kind == .return_op);
+    }
 }

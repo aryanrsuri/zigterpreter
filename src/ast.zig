@@ -31,6 +31,7 @@ pub const Expression = union(enum) {
 
 pub const Statement = union(enum) {
     let_statement: let_statement,
+    return_statement: return_statement,
 
     pub const let_statement = struct {
         const Self = @This();
@@ -42,6 +43,12 @@ pub const Statement = union(enum) {
             const let = self.token;
             std.debug.print("token: {}\n", .{let});
         }
+    };
+
+    pub const return_statement = struct {
+        const Self = @This();
+        token: Token,
+        value: ?Expression,
     };
 };
 
