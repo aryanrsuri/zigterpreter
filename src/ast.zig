@@ -27,11 +27,26 @@ pub const Identifier = struct {
 
 pub const Expression = union(enum) {
     indentifier: Identifier,
+    prefix_expression: PrefixExpression,
+    infix_expression: InfixExpression,
+};
+
+pub const PrefixExpression = struct {
+    const Self = @This();
+
+    pub fn init() Self {}
+};
+
+pub const InfixExpression = struct {
+    const Self = @This();
+
+    pub fn init(expr: Expression) Self {}
 };
 
 pub const Statement = union(enum) {
     let_statement: let_statement,
     return_statement: return_statement,
+    expression_statement: expression_statement,
 
     pub const let_statement = struct {
         const Self = @This();
@@ -47,6 +62,11 @@ pub const Statement = union(enum) {
 
     pub const return_statement = struct {
         const Self = @This();
+        token: Token,
+        value: ?Expression,
+    };
+
+    pub const expression_statement = struct {
         token: Token,
         value: ?Expression,
     };

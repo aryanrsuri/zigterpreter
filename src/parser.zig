@@ -7,7 +7,15 @@ const Program = ast.Program;
 const Statement = ast.Statement;
 const Expression = ast.Expression;
 const Identifier = ast.Identifier;
-
+pub const operators = enum(u8) {
+    lowest,
+    equals, // ==
+    lessgreater, // > <
+    sum, // +
+    product, // *
+    prefix, // - or ! before [x]
+    call, // fn call
+};
 const Parser = struct {
     const Self = @This();
     allocator: std.mem.Allocator,
@@ -54,11 +62,12 @@ const Parser = struct {
         return program;
     }
 
+    /// parse statement : self -> statement
     fn parse_statement(self: *Self) ?Statement {
         return switch (self.curr_token.kind) {
             .let => self.parse_let_statement(),
             .return_op => self.parse_return_statement(),
-            else => null,
+            else => self.parse_expression_statement(),
         };
     }
 
@@ -115,6 +124,36 @@ const Parser = struct {
             @panic("allocation of error list did not succeed");
         };
     }
+
+    /// expression parsing
+    fn parse_expression_statement(self: *Self) ?Statement {
+        var expr_stmt = Statement.expression_statement{
+            .token = self.curr_token,
+            .value = null,
+        };
+
+        expr_stmt.value = self.parse_expression(operators.lowest);
+        if (self.expect_peek(token_types.semicolon)) {
+            self.next_token();
+        } else {
+            self.next_error(token_types.semicolon);
+        }
+
+        return Statement{ .expression_statement = expr_stmt };
+    }
+
+    fn parse_expression(self: *Self, precedence: operators) ?Expression {
+        const prec = @enumToInt(precedence);
+        var left = self.parse_prefix_expression(self.curr_token.kind);
+        if (left == null) {
+            std.debug.warn("null left call {any}", .{prefix});
+            return null;
+        }
+
+        return left;
+    }
+    fn parse_prefix_expression(self: *Self, t: l.token_types) ?Expression {}
+    fn parse_infix_expression(self: *Self, t: l.token_types) ?Expression {}
 };
 
 test "let statements" {
