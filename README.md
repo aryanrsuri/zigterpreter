@@ -4,7 +4,7 @@ From the book Writing an interpreter in go [https://interpreterbook.com/]
 
 ### 
 The author Thorsten Ball is smart, I reccomend buying the book to support his work
-Working on chapter 2 currently
+Working on chapter 2 currently, in the pratt parser
 
 ### 
 If you have any code reccomendations based on what you see, please let me know as I am simply learning Zig (not an expert)
