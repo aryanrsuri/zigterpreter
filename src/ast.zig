@@ -23,6 +23,10 @@ pub const Identifier = struct {
     pub fn token_literal(self: *Self) []const u8 {
         return self.token.literal;
     }
+
+    pub fn print(self: *Self) void {
+        try std.debug.print("{s}", .{self.value});
+    }
 };
 
 pub const Expression = union(enum) {
@@ -38,9 +42,9 @@ pub const PrefixExpression = struct {
 };
 
 pub const InfixExpression = struct {
-    const Self = @This();
 
-    pub fn init(expr: Expression) Self {}
+    // pub fn init(expr: Expression) Self {}
+
 };
 
 pub const Statement = union(enum) {
